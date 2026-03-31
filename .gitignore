@@ -1,8 +1,8 @@
 # Data
-input.txt
-*.bin
-*.pt
-*.pth
+data/input.txt
+
+# Checkpoints
+checkpoints/
 
 # Python
 __pycache__/

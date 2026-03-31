@@ -1,9 +1,10 @@
+import os
 import torch
 from model import GPT
 
 # hyperparameters
-batch_size = 16       # how many independent sequences will we process in parallel?
-block_size = 32       # what is the maximum context length for predictions?
+batch_size = 16
+block_size = 32
 max_iters = 5000
 eval_interval = 100
 learning_rate = 1e-3
@@ -13,32 +14,27 @@ n_embd = 64
 n_head = 4
 n_layer = 4
 dropout = 0.0
-# ------------
 
 torch.manual_seed(1337)
 
-# wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt
-with open('input.txt', 'r', encoding='utf-8') as f:
+data_path = os.path.join(os.path.dirname(__file__), 'data', 'input.txt')
+with open(data_path, 'r', encoding='utf-8') as f:
     text = f.read()
 
-# here are all the unique characters that occur in this text
 chars = sorted(list(set(text)))
 vocab_size = len(chars)
-# create a mapping from characters to integers
-stoi = { ch:i for i,ch in enumerate(chars) }
-itos = { i:ch for i,ch in enumerate(chars) }
+stoi = {ch: i for i, ch in enumerate(chars)}
+itos = {i: ch for i, ch in enumerate(chars)}
 encode = lambda s: [stoi[c] for c in s]
 decode = lambda l: ''.join([itos[i] for i in l])
 
-# train and test splits
 data = torch.tensor(encode(text), dtype=torch.long)
-n = int(0.9 * len(data))  # first 90% will be train, rest val
+n = int(0.9 * len(data))
 train_data = data[:n]
 val_data = data[n:]
 
 
 def get_batch(split):
-    """Generate a small batch of data of inputs x and targets y."""
     d = train_data if split == 'train' else val_data
     ix = torch.randint(len(d) - block_size, (batch_size,))
     x = torch.stack([d[i:i+block_size] for i in ix])
@@ -88,6 +84,22 @@ for iter in range(max_iters):
     loss.backward()
     optimizer.step()
 
-# generate from the model
+# save checkpoint
+ckpt_dir = os.path.join(os.path.dirname(__file__), 'checkpoints')
+os.makedirs(ckpt_dir, exist_ok=True)
+ckpt_path = os.path.join(ckpt_dir, 'checkpoint.pt')
+torch.save({
+    'model_state_dict': model.state_dict(),
+    'vocab_size': vocab_size,
+    'n_embd': n_embd,
+    'n_head': n_head,
+    'n_layer': n_layer,
+    'block_size': block_size,
+    'dropout': dropout,
+    'chars': chars,
+}, ckpt_path)
+print(f"Saved checkpoint to {ckpt_path}")
+
+# sample generation
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
-print(decode(m.generate(context, max_new_tokens=2000)[0].tolist()))
+print(decode(m.generate(context, max_new_tokens=500)[0].tolist()))
